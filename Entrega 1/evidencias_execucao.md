@@ -149,3 +149,23 @@ Resultado esperado: `curso=30`, `turma=90`, `aluno=100000`, `matricula=1000000`.
 <!-- Ex: "Carga completa em 18min32s" -->
 
 Aproximadamente 15 minutos
+
+## 5. Desafio (OPCIONAL)
+
+![alt text](imgs/optional_challenge_01.png)
+
+### 5.1. Simular a edição concorrente de um registro;
+
+![alt text](imgs/concurrent_edition.png)
+
+### 5.2. Forçar um dead-lock;
+
+![alt text](imgs/deadlock.png)
+
+### 5.1. Forçar a leitura suja de um registro;
+
+![alt text](imgs/dirty_read.png)
+
+### 5.1. Forçar o banco de dados a perder a integridade (exemplo: criar um atributo not null para uma tabela existente).
+
+![alt text](integrity_loss.png)
