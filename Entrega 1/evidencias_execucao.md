@@ -162,10 +162,38 @@ Aproximadamente 15 minutos
 
 ![alt text](imgs/deadlock.png)
 
-### 5.1. Forçar a leitura suja de um registro;
+### 5.3. Forçar a leitura suja de um registro;
 
 ![alt text](imgs/dirty_read.png)
 
-### 5.1. Forçar o banco de dados a perder a integridade (exemplo: criar um atributo not null para uma tabela existente).
+### 5.4. Forçar o banco de dados a perder a integridade (exemplo: criar um atributo not null para uma tabela existente).
 
-![alt text](integrity_loss.png)
+![alt text](imgs/integrity_loss.png)
+
+### 6. Trazer para a tabela transacional um atributo descritivo de uma das tabelas referenciadas.
+
+(DDL):
+```sql
+ALTER TABLE matricula ADD COLUMN desc_turma VARCHAR(20);
+```
+
+![alt text](imgs/alter_table_matricula.png)
+
+(DML)
+```sql
+UPDATE matricula m 
+SET desc_turma = CONCAT(t.ano_letivo, '-', t.semestre, '-', SUBSTRING(t.turno, 1, 1)) 
+FROM turma t 
+WHERE m.id_turma = t.id_turma;
+```
+![alt text](imgs/update_desc_turma_matricula.png)
+
+Printar os resultados:
+
+![alt text](imgs/print_matricula.png)
+
+### 7. Tabela de histórico e expurgo
+
+7.1 - Tabela transacional com sufixo "_history" e "_current"
+
+7.2 - UPSERT da tabela original para as tabelas histórica e atuais
