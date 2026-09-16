@@ -246,18 +246,136 @@ explain analyze select count(*) from  matricula;
 
 ![alt text](imgs/query_matricula.png)
 
-Conclusões do estudo: Após testar as duas consultas, vimos que ler a tabela original foi mais rápido (165ms) do que ler a VIEW (222ms). Isso acontece porque a VIEW precisa fazer um trabalho extra (o Parallel Append) para ler e juntar as duas tabelas separadas (history e current). Conclusão: Separar os dados antigos ajuda muito na organização e no expurgo futuro, mas deixa a consulta um pouquinho mais lenta.
+Conclusões do estudo: Após testar as duas consultas, vimos que ler a tabela original foi mais rápido aprox.(165ms) do que ler a VIEW aprox.(222ms). Isso acontece porque a VIEW precisa fazer um trabalho extra (o Parallel Append) para ler e juntar as duas tabelas separadas (history e current). Conclusão: Separar os dados antigos ajuda muito na organização e no expurgo futuro, mas deixa a consulta um pouquinho mais lenta.
 
 ### 8. Monte os comandos SELECT para os seguintes cenários
 
 8.1. Selecione dados da tabela transacional e referenciada com a  junção pelo par chave primária / chave estrangeira;
 
+```sql
+SELECT m.id_matricula, m.data_matricula, t.ano_letivo, t.turno
+FROM matricula m
+INNER JOIN turma t ON m.id_turma = t.id_turma;
+```
+![alt text](imgs/juncao_table.png)
+
+Analise explain
+```sql
+explain analyze SELECT m.id_matricula, m.data_matricula, t.ano_letivo, t.turno
+FROM matricula m
+INNER JOIN turma t ON m.id_turma = t.id_turma;
+```
+![alt text](imgs/inner_matricula.png)
+
 8.2. Selecione dados das tabelas transacional e referenciada 
 usando subqueries pelo par chave primária / chave estrangeira;
+
+```sql
+SELECT m.id_matricula, m.data_matricula,
+       (SELECT t.turno FROM turma t WHERE t.id_turma = m.id_turma) AS turno
+FROM matricula m;
+```
+
+![alt text](imgs/subquery_table.png)
+
+Analise explain
+
+```sql
+explain analyze SELECT m.id_matricula, m.data_matricula,
+       (SELECT t.turno FROM turma t WHERE t.id_turma = m.id_turma) AS turno
+FROM matricula m;
+```
+![alt text](imgs/subqueries.png)
+
+
 
 8.3. Selecione dados das tabelas transacional e referenciada 
 usando junção pelo atributo descritivo importado no passo 1;
 
+Sem índice
+
+```sql
+explain analyze SELECT m.id_matricula, m.data_matricula, t.ano_letivo, t.turno
+FROM matricula m
+INNER JOIN turma t ON m.id_turma = t.id_turma
+where m.desc_turma = '2024-1-N';
+
+```
+![alt text](imgs/sem_indice_juncao_matricula.png)
+
+
 8.4. Comparativo:
 Anote o tempo de execução das três consultas
+
 Proponhe a criação de um índice e analise novamente a execução.
+
+Index
+```sql
+CREATE INDEX idx_matricula_desc_turma
+ON matricula (desc_turma)
+INCLUDE (id_turma, id_matricula, data matricula);
+```
+![alt text](imgs/index.png)
+
+```sql
+explain analyze SELECT m.id_matricula, m.data_matricula, t.ano_letivo, t.turno
+FROM matricula m
+INNER JOIN turma t ON m.id_turma = t.id_turma
+where m.desc_turma = '2024-1-N';
+```
+![alt text](imgs/com_indice_juncao_matricula.png)
+
+### 9. Diferença COUNTs
+ 
+**1. COUNT(*)**
+ 
+Conta todas as linhas da tabela (ou do resultado da query), não importa se tem NULL ou não. Ele nem olha pra dentro das colunas, só conta linha por linha mesmo.
+ 
+Quantidade total de registros:
+ 
+![alt text](imgs/count_ast_aluno.png)
+ 
+Registros nulos:
+ 
+![alt text](imgs/registros_nulos_aluno.png)
+ 
+**2. COUNT(1)**
+ 
+Como o professor mesmo comentou em algumas aulas, muita gente, acha que COUNT(1) é mais rápido que COUNT(*) porque "tá contando um número fixo em vez de olhar as colunas todas". Mas isso de fato é mito.
+Na prática, os bancos mais modernos tratam COUNT(1) exatamente igual a COUNT(*). O otimizador do banco já entende que não precisa avaliar coluna nenhuma.
+ 
+Tempo Count(*)
+ 
+![alt text](imgs/Temp_count_ast.png)
+ 
+Tempo Count (1)
+ 
+![alt text](imgs/Temp_count_1.png)
+ 
+ 
+**3. COUNT(coluna)**
+ 
+Para esse caso, já temos existe uma mudança, o COUNT(coluna) só conta as linhas em que aquela coluna específica não é NULL. Ou seja, se a tabela *alunos* tem 100000 linhas, mas somente 5 alunos possuem a idade preenchida (idade != NULL).
+ 
+Quantidade total de registros (count (*)):
+ 
+![alt text](imgs/count_ast_aluno.png)
+ 
+Quantidade COUNT(idade)
+ 
+![alt text](imgs/count_idade.png)
+ 
+ 
+**4. COUNT(DISTINCT coluna)**
+ 
+Conta quantos valores diferentes (sem repetir) aparecem naquela coluna, e também ignora NULL.
+Por exemplo: Retonar "quantas desc_turma eu tenho cadastrado", sem contar a mesma desc_turma várias vezes.
+ 
+Total de registros sem distinct:
+ 
+![alt text](imgs/count_ast_matricula.png)
+ 
+Consulta com distinct:
+ 
+![alt text](imgs/count_distinct_coluna.png)
+
