@@ -196,4 +196,68 @@ Printar os resultados:
 
 7.1 - Tabela transacional com sufixo "_history" e "_current"
 
+```sql
+CREATE TABLE matricula_history (LIKE matricula INCLUDING ALL);
+CREATE TABLE matricula_current (LIKE matricula INCLUDING ALL);
+```
+![alt text](imgs/create_table_history.png)
+
 7.2 - UPSERT da tabela original para as tabelas histórica e atuais
+
+```sql
+
+INSERT INTO matricula_history 
+SELECT * FROM matricula 
+WHERE EXTRACT(YEAR FROM data_matricula) < 2026
+ON CONFLICT (id_matricula) DO NOTHING;
+
+INSERT INTO matricula_current 
+SELECT * FROM matricula 
+WHERE EXTRACT(YEAR FROM data_matricula) >= 2026
+ON CONFLICT (id_matricula) DO NOTHING;
+
+```
+![alt text](imgs/insert_history_current.png)
+
+7.3 - Crie uma view das duas tabelas (hist e curr)
+
+```sql
+create view vw_matricula as
+select * from matricula_history
+union all
+select * from matricula_current;
+```
+![alt text](imgs/view_tables_history.png)
+
+Print
+
+![alt text](imgs/vw_print.png)
+
+7.4 - Compare o tempo e o plano de execução de desempenho da view
+
+```sql
+explain analyze select count(*) from vw_matricula;
+```
+![alt text](imgs/query_vwmatricula.png)
+
+```sql
+explain analyze select count(*) from  matricula;
+```
+
+![alt text](imgs/query_matricula.png)
+
+Conclusões do estudo: Após testar as duas consultas, vimos que ler a tabela original foi mais rápido (165ms) do que ler a VIEW (222ms). Isso acontece porque a VIEW precisa fazer um trabalho extra (o Parallel Append) para ler e juntar as duas tabelas separadas (history e current). Conclusão: Separar os dados antigos ajuda muito na organização e no expurgo futuro, mas deixa a consulta um pouquinho mais lenta.
+
+### 8. Monte os comandos SELECT para os seguintes cenários
+
+8.1. Selecione dados da tabela transacional e referenciada com a  junção pelo par chave primária / chave estrangeira;
+
+8.2. Selecione dados das tabelas transacional e referenciada 
+usando subqueries pelo par chave primária / chave estrangeira;
+
+8.3. Selecione dados das tabelas transacional e referenciada 
+usando junção pelo atributo descritivo importado no passo 1;
+
+8.4. Comparativo:
+Anote o tempo de execução das três consultas
+Proponhe a criação de um índice e analise novamente a execução.
